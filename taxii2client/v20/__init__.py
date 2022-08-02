@@ -54,25 +54,33 @@ def _grab_total_items(resp):
     """Extracts the total elements (from HTTP Header) available on the Endpoint making the request.
     This is specific to TAXII 2.0"""
     try:
-        results = re.match(r"^items (\d+)-(\d+)/(\d+)$", resp.headers["Content-Range"])
-        if results:
-            return int(results.group(2)) - int(results.group(1)) + 1, int(results.group(3))
+        if results := re.match(
+            r"^items (\d+)-(\d+)/(\d+)$", resp.headers["Content-Range"]
+        ):
+            return int(results[2]) - int(results[1]) + 1, int(results[3])
 
-        results = re.match(r"^items (\d+)-(\d+)/\*$", resp.headers["Content-Range"])
-        if results:
-            return int(results.group(2)) - int(results.group(1)) + 1, float("inf")
+        if results := re.match(
+            r"^items (\d+)-(\d+)/\*$", resp.headers["Content-Range"]
+        ):
+            return int(results[2]) - int(results[1]) + 1, float("inf")
 
-        results = re.match(r"^items \*/\*$", resp.headers["Content-Range"])
-        if results:
+        if results := re.match(
+            r"^items \*/\*$", resp.headers["Content-Range"]
+        ):
             return float("inf"), float("inf")
 
-        results = re.match(r"^items \*/(\d+)$", resp.headers["Content-Range"])
-        if results:
-            return float("inf"), int(results.group(1))
+        if results := re.match(
+            r"^items \*/(\d+)$", resp.headers["Content-Range"]
+        ):
+            return float("inf"), int(results[1])
     except (ValueError, IndexError) as e:
-        six.raise_from(InvalidJSONError(
-            "Invalid Content-Range was received from " + resp.request.url
-        ), e)
+        six.raise_from(
+            InvalidJSONError(
+                f"Invalid Content-Range was received from {resp.request.url}"
+            ),
+            e,
+        )
+
     except KeyError:
         log.warning("TAXII Server Response did not include 'Content-Range' header - results could be incomplete.")
     return _grab_total_items_from_resource(resp), float("inf")
@@ -333,11 +341,11 @@ class Collection(_TAXIIEndpoint):
 
     @property
     def objects_url(self):
-        return self.url + "objects/"
+        return f"{self.url}objects/"
 
     @property
     def manifest_url(self):
-        return self.url + "manifest/"
+        return f"{self.url}manifest/"
 
     @property
     def _raw(self):
@@ -413,7 +421,7 @@ class Collection(_TAXIIEndpoint):
         headers = {"Accept": accept}
 
         if per_request > 0:
-            headers["Range"] = "items={}-{}".format(start, (start + per_request) - 1)
+            headers["Range"] = f"items={start}-{start + per_request - 1}"
 
         try:
             response = self._conn.get(self.objects_url, headers=headers, params=query_params)
@@ -421,7 +429,7 @@ class Collection(_TAXIIEndpoint):
             if per_request > 0:
                 # This is believed to be an error in TAXII 2.0
                 # http://docs.oasis-open.org/cti/taxii/v2.0/cs01/taxii-v2.0-cs01.html#_Toc496542716
-                headers["Range"] = "items {}-{}".format(start, (start + per_request) - 1)
+                headers["Range"] = f"items {start}-{start + per_request - 1}"
                 response = self._conn.get(self.objects_url, headers=headers, params=query_params)
             else:
                 raise e
@@ -492,16 +500,12 @@ class Collection(_TAXIIEndpoint):
             data = bundle
 
         else:
-            raise TypeError("Don't know how to handle type '{}'".format(
-                type(bundle).__name__))
+            raise TypeError(f"Don't know how to handle type '{type(bundle).__name__}'")
 
         status_json = self._conn.post(self.objects_url, headers=headers,
                                       data=data)
 
-        status_url = urlparse.urljoin(
-            self.url,
-            "../../status/{}".format(status_json["id"])
-        )
+        status_url = urlparse.urljoin(self.url, f'../../status/{status_json["id"]}')
 
         status = Status(url=status_url, conn=self._conn,
                         status_info=status_json)
@@ -521,7 +525,7 @@ class Collection(_TAXIIEndpoint):
         headers = {"Accept": accept}
 
         if per_request > 0:
-            headers["Range"] = "items={}-{}".format(start, (start + per_request) - 1)
+            headers["Range"] = f"items={start}-{start + per_request - 1}"
 
         try:
             response = self._conn.get(self.manifest_url, headers=headers, params=query_params)
@@ -529,7 +533,7 @@ class Collection(_TAXIIEndpoint):
             if per_request > 0:
                 # This is believed to be an error in TAXII 2.0
                 # http://docs.oasis-open.org/cti/taxii/v2.0/cs01/taxii-v2.0-cs01.html#_Toc496542716
-                headers["Range"] = "items {}-{}".format(start, (start + per_request) - 1)
+                headers["Range"] = f"items {start}-{start + per_request - 1}"
                 response = self._conn.get(self.manifest_url, headers=headers, params=query_params)
             else:
                 raise e
@@ -665,7 +669,7 @@ class ApiRoot(_TAXIIEndpoint):
 
         This invokes the ``Get Collections`` endpoint.
         """
-        url = self.url + "collections/"
+        url = f"{self.url}collections/"
         response = self._conn.get(url, headers={"Accept": accept})
 
         self._collections = []
@@ -678,7 +682,7 @@ class ApiRoot(_TAXIIEndpoint):
         self._loaded_collections = True
 
     def get_status(self, status_id, accept=MEDIA_TYPE_TAXII_V20):
-        status_url = self.url + "status/" + status_id + "/"
+        status_url = f"{self.url}status/{status_id}/"
         response = self._conn.get(status_url, headers={"Accept": accept})
         return Status(status_url, conn=self._conn, status_info=response)
 

@@ -19,19 +19,25 @@ from taxii2client.exceptions import (
 from taxii2client.v20 import ApiRoot, Collection, Server, Status, as_pages
 
 TAXII_SERVER = "example.com"
-DISCOVERY_URL = "https://{}/taxii/".format(TAXII_SERVER)
-API_ROOT_URL = "https://{}/api1/".format(TAXII_SERVER)
-COLLECTIONS_URL = API_ROOT_URL + "collections/"
-COLLECTION_URL = COLLECTIONS_URL + "91a7b528-80eb-42ed-a74d-c6fbd5a26116/"
-OBJECTS_URL = COLLECTION_URL + "objects/"
+DISCOVERY_URL = f"https://{TAXII_SERVER}/taxii/"
+API_ROOT_URL = f"https://{TAXII_SERVER}/api1/"
+COLLECTIONS_URL = f"{API_ROOT_URL}collections/"
+COLLECTION_URL = f"{COLLECTIONS_URL}91a7b528-80eb-42ed-a74d-c6fbd5a26116/"
+OBJECTS_URL = f"{COLLECTION_URL}objects/"
 GET_OBJECTS_URL = OBJECTS_URL
 ADD_OBJECTS_URL = OBJECTS_URL
-WRITABLE_COLLECTION_URL = COLLECTIONS_URL + "e278b87e-0f9b-4c63-a34c-c8f0b3e91acb/"
-ADD_WRITABLE_OBJECTS_URL = WRITABLE_COLLECTION_URL + "objects/"
-GET_OBJECT_URL = OBJECTS_URL + "indicator--252c7c11-daf2-42bd-843b-be65edca9f61/"
-MANIFEST_URL = COLLECTION_URL + "manifest/"
+WRITABLE_COLLECTION_URL = (
+    f"{COLLECTIONS_URL}e278b87e-0f9b-4c63-a34c-c8f0b3e91acb/"
+)
+
+ADD_WRITABLE_OBJECTS_URL = f"{WRITABLE_COLLECTION_URL}objects/"
+GET_OBJECT_URL = (
+    f"{OBJECTS_URL}indicator--252c7c11-daf2-42bd-843b-be65edca9f61/"
+)
+
+MANIFEST_URL = f"{COLLECTION_URL}manifest/"
 STATUS_ID = "2d086da7-4bdc-4f91-900e-d77486753710"
-STATUS_URL = API_ROOT_URL + "status/" + STATUS_ID + "/"
+STATUS_URL = f"{API_ROOT_URL}status/{STATUS_ID}/"
 
 # These responses are provided as examples in the TAXII 2.0 specification.
 DISCOVERY_RESPONSE = """{
@@ -497,10 +503,7 @@ def test_collection_unexpected_kwarg():
 
 @responses.activate
 def test_get_collection_objects_paged_1(collection):
-    obj_return = []
-    for x in range(0, 50):
-        obj_return.append(json.loads(STIX_OBJECT))
-
+    obj_return = [json.loads(STIX_OBJECT) for _ in range(50)]
     responses.add(responses.GET, GET_OBJECTS_URL,
                   json.dumps({"type": "bundle", "spec_version": "2.0",
                               "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
@@ -541,10 +544,7 @@ def test_get_collection_objects_paged_1(collection):
 
 @responses.activate
 def test_get_collection_objects_paged_2(collection):
-    obj_return = []
-    for x in range(0, 50):
-        obj_return.append(json.loads(STIX_OBJECT))
-
+    obj_return = [json.loads(STIX_OBJECT) for _ in range(50)]
     responses.add(responses.GET, GET_OBJECTS_URL,
                   json.dumps({"type": "bundle", "spec_version": "2.0",
                               "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
@@ -589,10 +589,7 @@ def test_get_collection_objects_paged_2(collection):
 
 @responses.activate
 def test_get_collection_objects_paged_3(collection):
-    obj_return = []
-    for x in range(0, 50):
-        obj_return.append(json.loads(STIX_OBJECT))
-
+    obj_return = [json.loads(STIX_OBJECT) for _ in range(50)]
     responses.add(responses.GET, GET_OBJECTS_URL,
                   json.dumps({"type": "bundle", "spec_version": "2.0",
                               "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
@@ -633,10 +630,7 @@ def test_get_collection_objects_paged_3(collection):
 
 @responses.activate
 def test_get_collection_objects_paged_4(collection):
-    obj_return = []
-    for x in range(0, 50):
-        obj_return.append(json.loads(STIX_OBJECT))
-
+    obj_return = [json.loads(STIX_OBJECT) for _ in range(50)]
     responses.add(responses.GET, GET_OBJECTS_URL,
                   json.dumps({"type": "bundle", "spec_version": "2.0",
                               "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
@@ -681,10 +675,7 @@ def test_get_collection_objects_paged_4(collection):
 
 @responses.activate
 def test_get_collection_objects_paged_5(collection):
-    obj_return = []
-    for x in range(0, 50):
-        obj_return.append(json.loads(STIX_OBJECT))
-
+    obj_return = [json.loads(STIX_OBJECT) for _ in range(50)]
     responses.add(responses.GET, GET_OBJECTS_URL,
                   json.dumps({"type": "bundle", "spec_version": "2.0",
                               "id": "bundle--5d0092c5-5f74-4287-9642-33f4c354e56d",
@@ -877,8 +868,14 @@ def test_status_raw(status_dict):
 
 @responses.activate
 def test_content_type_valid(collection):
-    responses.add(responses.GET, GET_OBJECT_URL, GET_OBJECT_RESPONSE,
-                  status=200, content_type="%s; charset=utf-8" % MEDIA_TYPE_STIX_V20)
+    responses.add(
+        responses.GET,
+        GET_OBJECT_URL,
+        GET_OBJECT_RESPONSE,
+        status=200,
+        content_type=f"{MEDIA_TYPE_STIX_V20}; charset=utf-8",
+    )
+
 
     response = collection.get_object("indicator--252c7c11-daf2-42bd-843b-be65edca9f61")
     indicator = response["objects"][0]
@@ -989,9 +986,14 @@ def test_taxii_endpoint_raises_exception():
 def test_valid_content_type_for_connection():
     """The server responded with charset=utf-8, but the media types are correct
     and first."""
-    responses.add(responses.GET, COLLECTION_URL, COLLECTIONS_RESPONSE,
-                  status=200,
-                  content_type=MEDIA_TYPE_TAXII_V20 + "; charset=utf-8")
+    responses.add(
+        responses.GET,
+        COLLECTION_URL,
+        COLLECTIONS_RESPONSE,
+        status=200,
+        content_type=f"{MEDIA_TYPE_TAXII_V20}; charset=utf-8",
+    )
+
 
     conn = _HTTPConnection(user="foo", password="bar", verify=False)
     conn.get("https://example.com/api1/collections/91a7b528-80eb-42ed-a74d-c6fbd5a26116/",
@@ -1006,8 +1008,11 @@ def test_invalid_content_type_for_connection():
 
     with pytest.raises(TAXIIServiceException) as excinfo:
         conn = _HTTPConnection(user="foo", password="bar", verify=False)
-        conn.get("https://example.com/api1/collections/91a7b528-80eb-42ed-a74d-c6fbd5a26116/",
-                 headers={"Accept": MEDIA_TYPE_TAXII_V20 + "; charset=utf-8"})
+        conn.get(
+            "https://example.com/api1/collections/91a7b528-80eb-42ed-a74d-c6fbd5a26116/",
+            headers={"Accept": f"{MEDIA_TYPE_TAXII_V20}; charset=utf-8"},
+        )
+
 
     assert ("Unexpected Response. Got Content-Type: 'application/vnd.oasis.taxii+json; "
             "version=2.0' for Accept: 'application/vnd.oasis.taxii+json; version=2.0; "
@@ -1246,8 +1251,14 @@ def test_server_with_custom_properties(server):
 def test_collection_missing_trailing_slash():
     set_collection_response()
     collection = Collection(COLLECTION_URL[:-1])
-    responses.add(responses.GET, GET_OBJECT_URL, GET_OBJECT_RESPONSE,
-                  status=200, content_type="%s; charset=utf-8" % MEDIA_TYPE_STIX_V20)
+    responses.add(
+        responses.GET,
+        GET_OBJECT_URL,
+        GET_OBJECT_RESPONSE,
+        status=200,
+        content_type=f"{MEDIA_TYPE_STIX_V20}; charset=utf-8",
+    )
+
 
     response = collection.get_object("indicator--252c7c11-daf2-42bd-843b-be65edca9f61")
     indicator = response["objects"][0]

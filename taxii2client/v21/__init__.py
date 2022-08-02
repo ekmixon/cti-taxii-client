@@ -302,7 +302,7 @@ class Collection(_TAXIIEndpoint):
 
     @property
     def objects_url(self):
-        return self.url + "objects/"
+        return f"{self.url}objects/"
 
     @property
     def _raw(self):
@@ -453,15 +453,11 @@ class Collection(_TAXIIEndpoint):
             data = envelope
 
         else:
-            raise TypeError("Don't know how to handle type '{}'".format(
-                type(envelope).__name__))
+            raise TypeError(f"Don't know how to handle type '{type(envelope).__name__}'")
 
         status_json = self._conn.post(self.objects_url, headers=headers, data=data)
 
-        status_url = urlparse.urljoin(
-            self.url,
-            "../../status/{}".format(status_json["id"])
-        )
+        status_url = urlparse.urljoin(self.url, f'../../status/{status_json["id"]}')
 
         status = Status(url=status_url, conn=self._conn, status_info=status_json)
 
@@ -476,7 +472,9 @@ class Collection(_TAXIIEndpoint):
         """Implement the ``Get Object Manifests`` endpoint (section 5.6)."""
         self._verify_can_read()
         query_params = _filter_kwargs_to_query_params(filter_kwargs)
-        return self._conn.get(self.url + "manifest/", headers={"Accept": accept}, params=query_params)
+        return self._conn.get(
+            f"{self.url}manifest/", headers={"Accept": accept}, params=query_params
+        )
 
 
 class ApiRoot(_TAXIIEndpoint):
@@ -608,7 +606,7 @@ class ApiRoot(_TAXIIEndpoint):
 
         This invokes the ``Get Collections`` endpoint.
         """
-        url = self.url + "collections/"
+        url = f"{self.url}collections/"
         response = self._conn.get(url, headers={"Accept": accept})
 
         self._collections = []
@@ -621,7 +619,7 @@ class ApiRoot(_TAXIIEndpoint):
         self._loaded_collections = True
 
     def get_status(self, status_id, accept=MEDIA_TYPE_TAXII_V21):
-        status_url = self.url + "status/" + status_id + "/"
+        status_url = f"{self.url}status/{status_id}/"
         response = self._conn.get(status_url, headers={"Accept": accept})
         return Status(status_url, conn=self._conn, status_info=response)
 

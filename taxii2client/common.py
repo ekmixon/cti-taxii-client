@@ -39,10 +39,10 @@ def _format_datetime(dttm):
     if precision == "second":
         pass  # Already precise to the second
     elif precision == "millisecond":
-        ts = ts + "." + ms[:3]
+        ts = f"{ts}.{ms[:3]}"
     elif zoned.microsecond > 0:
-        ts = ts + "." + ms.rstrip("0")
-    return ts + "Z"
+        ts = f"{ts}." + ms.rstrip("0")
+    return f"{ts}Z"
 
 
 def _ensure_datetime_to_string(maybe_dttm):
@@ -85,12 +85,7 @@ def _filter_kwargs_to_query_params(filter_kwargs):
                 isinstance(arglist, six.string_types):
             arglist = arglist,
 
-        if kwarg == "version":
-            query_params["match[version]"] = ",".join(
-                _ensure_datetime_to_string(val) for val in arglist
-            )
-
-        elif kwarg == "added_after":
+        if kwarg == "added_after":
             if len(arglist) > 1:
                 raise InvalidArgumentsError("No more than one value for filter"
                                             " 'added_after' may be given")
@@ -105,8 +100,13 @@ def _filter_kwargs_to_query_params(filter_kwargs):
         elif kwarg == "next":
             query_params["next"] = arglist
 
+        elif kwarg == "version":
+            query_params["match[version]"] = ",".join(
+                _ensure_datetime_to_string(val) for val in arglist
+            )
+
         else:
-            query_params["match[" + kwarg + "]"] = ",".join(arglist)
+            query_params[f"match[{kwarg}]"] = ",".join(arglist)
 
     return query_params
 
@@ -124,9 +124,12 @@ def _to_json(resp):
         return resp.json()
     except ValueError as e:
         # Maybe better to report the original request URL?
-        six.raise_from(InvalidJSONError(
-            "Invalid JSON was received from " + resp.request.url
-        ), e)
+        six.raise_from(
+            InvalidJSONError(
+                f"Invalid JSON was received from {resp.request.url}"
+            ),
+            e,
+        )
 
 
 def _grab_total_items_from_resource(resp):
@@ -141,7 +144,7 @@ class TokenAuth(requests.auth.AuthBase):
         self.key = key
 
     def __call__(self, r):
-        r.headers['Authorization'] = 'Token {}'.format(self.key)
+        r.headers['Authorization'] = f'Token {self.key}'
         return r
 
 
@@ -179,10 +182,7 @@ class _TAXIIEndpoint(object):
 
         # Add trailing slash to TAXII endpoint if missing
         # https://github.com/oasis-open/cti-taxii-client/issues/50
-        if url[-1] == "/":
-            self.url = url
-        else:
-            self.url = url + "/"
+        self.url = url if url[-1] == "/" else f"{url}/"
 
     def close(self):
         self._conn.close()
@@ -258,11 +258,13 @@ class _HTTPConnection(object):
         content_type_tokens = content_type.replace(' ', '').split(';')
 
         if self.version == "2.0":
-            return (
-                    all(elem in content_type_tokens for elem in accept_tokens) and
-                    (content_type_tokens[0] == 'application/vnd.oasis.taxii+json' or
-                     content_type_tokens[0] == 'application/vnd.oasis.stix+json')
-            )
+            return all(
+                elem in content_type_tokens for elem in accept_tokens
+            ) and content_type_tokens[0] in [
+                'application/vnd.oasis.taxii+json',
+                'application/vnd.oasis.stix+json',
+            ]
+
         else:
             return (
                     all(elem in content_type_tokens for elem in accept_tokens) and
@@ -342,13 +344,12 @@ class _HTTPConnection(object):
         """
 
         if len(kwargs) > 1:
-            raise InvalidArgumentsError("Too many extra args ({} > 1)".format(
-                len(kwargs)))
+            raise InvalidArgumentsError(f"Too many extra args ({len(kwargs)} > 1)")
 
         if kwargs:
             kwarg = next(iter(kwargs))
             if kwarg not in ("json", "data"):
-                raise InvalidArgumentsError("Invalid kwarg: " + kwarg)
+                raise InvalidArgumentsError(f"Invalid kwarg: {kwarg}")
 
         resp = self.session.post(url, headers=headers, params=params, **kwargs)
         resp.raise_for_status()
